@@ -18,10 +18,25 @@ try {
   fileConfig = require('./config.json');
 } catch {}
 
+function parseAdminIds(value, fallback) {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.map(String);
+      return [String(parsed)];
+    } catch {
+      // plain text — could be single ID or comma-separated IDs
+      return value.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return fallback || [];
+}
+
 const config = {
   BOT_TOKEN: process.env.BOT_TOKEN || fileConfig.BOT_TOKEN,
   GUILD_ID: process.env.GUILD_ID || fileConfig.GUILD_ID || '',
-  ADMIN_IDS: process.env.ADMIN_IDS ? JSON.parse(process.env.ADMIN_IDS) : fileConfig.ADMIN_IDS || [],
+  ADMIN_IDS: parseAdminIds(process.env.ADMIN_IDS, fileConfig.ADMIN_IDS),
   MIN_ACCOUNT_AGE_DAYS: Number(process.env.MIN_ACCOUNT_AGE_DAYS || fileConfig.MIN_ACCOUNT_AGE_DAYS || 30),
   TOP_COUNT: Number(process.env.TOP_COUNT || fileConfig.TOP_COUNT || 15),
   WEEK_MS: Number(process.env.WEEK_MS || fileConfig.WEEK_MS || 7 * 24 * 60 * 60 * 1000),
