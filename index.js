@@ -95,10 +95,12 @@ function enqueue(guildId, fn) {
   return next;
 }
 
-function isAdmin(member) {
+function isAdmin(interaction) {
+  const member = interaction.member;
   if (!member) return false;
   if ((config.ADMIN_IDS || []).includes(member.id)) return true;
-  return member.id === member.guild.ownerId;
+  // interaction.member is a plain object — use interaction.guild for owner check
+  return member.id === interaction.guild?.ownerId;
 }
 
 // ---------- Leaderboard ----------
@@ -311,11 +313,23 @@ client.on(Events.InteractionCreate, async (interaction) => {
   // Defer immediately — we have 15 min instead of 3s for slow operations
   await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
 
+  try {
+    await handleCommand(interaction);
+  } catch (e) {
+    console.error('Command error:', e);
+    await interaction.editReply({ content: `❌ صار خطأ: ${e.message}` }).catch(() => {});
+  }
+});
+
+async function handleCommand(interaction) {
   if (interaction.commandName === 'setup') {
-    if (!isAdmin(interaction.member)) {
+    if (!isAdmin(interaction)) {
       return interaction.editReply({ content: '❌ هذا الأمر للأدمن فقط.' });
     }
     const channel = interaction.options.getChannel('channel');
+    if (!channel) {
+      return interaction.editReply({ content: '❌ ما لقيت الروم المحدد.' }).catch(() => {});
+    }
     const gd = getGuildData(interaction.guild.id);
     ensureWeek(gd);
 
@@ -331,7 +345,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (interaction.commandName === 'reset') {
-    if (!isAdmin(interaction.member)) {
+    if (!isAdmin(interaction)) {
       return interaction.editReply({ content: '❌ هذا الأمر للأدمن فقط.' });
     }
     const gd = getGuildData(interaction.guild.id);
@@ -339,7 +353,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await updateLeaderboard(interaction.guild);
     await interaction.editReply({ content: '✅ تم تصفير إحصائيات الأسبوع وبدأ أسبوع جديد.' }).catch(() => {});
   }
-});
+}
 
 // Prevent bot crash on unhandled errors
 process.on('unhandledRejection', (e) => console.error('Unhandled rejection:', e));
