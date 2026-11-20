@@ -43,6 +43,8 @@ const config = {
 };
 
 const DATA_FILE = path.join(__dirname, 'data.json');
+const WEEK_MS = config.WEEK_MS;
+const TOP_COUNT = config.TOP_COUNT;
 
 // ---------- Data persistence ----------
 let db = { guilds: {} };
